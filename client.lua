@@ -1,33 +1,25 @@
-local godModeEnabled = false
+local godModePlayers = {}
 
--- Listen for the 'setGodMode' event from the server
+
 RegisterNetEvent('setGodMode')
-AddEventHandler('setGodMode', function(enable)
-    godModeEnabled = enable
-    SetPlayerInvincible(PlayerId(), godModeEnabled)
+AddEventHandler('setGodMode', function(playerId, enable, playerName)
+    godModePlayers[playerId] = enable
     
-    -- Visual indicator by setting alpha
-    local alpha = godModeEnabled and 150 or 255
-    SetEntityAlpha(PlayerPedId(), alpha, false)
-
-    -- Create a thread to keep the player invincible while godModeEnabled is true
-    if godModeEnabled then
-        Citizen.CreateThread(function()
-            while godModeEnabled do
-                Wait(0)
-                SetPlayerInvincible(PlayerId(), true)
-            end
-            -- When godModeEnabled is turned off, disable invincibility
-            SetPlayerInvincible(PlayerId(), false)
-        end)
+    
+    if playerId == PlayerId() then
+        SetPlayerInvincible(playerId, enable)
+        
+        -- Visual indicator for the local player (admin)
+        local alpha = enable and 150 or 255
+        SetEntityAlpha(PlayerPedId(), alpha, false)
     end
 end)
 
--- Function to draw "Administrator" text above player
-function DrawTextOverPlayer()
-    local text = "Administrator"
-    local name = GetPlayerName(PlayerId())
-    local ped = PlayerPedId()
+
+function DrawTextOverPlayer(playerId, playerName)
+    local ped = GetPlayerPed(GetPlayerFromServerId(playerId))
+    if ped == -1 then return end 
+
     local headPos = GetPedBoneCoords(ped, 12844, 0.0, 0.0, 0.0)
     local onScreen, _x, _y = World3dToScreen2d(headPos.x, headPos.y, headPos.z + 0.6)
 
@@ -39,32 +31,37 @@ function DrawTextOverPlayer()
         SetTextColour(255, 0, 0, 215)
         SetTextCentre(true)
         SetTextEntry("STRING")
-        AddTextComponentString(text)
+        AddTextComponentString("Administrator")
         EndTextCommandDisplayText(_x, _y)
 
-        -- Draw the player's name in white
+        -- Draw the player's name in white, centered below "Administrator"
         SetTextScale(0.35, 0.35)
         SetTextFont(4)
         SetTextProportional(1)
-        SetTextColour(255, 255, 255, 215)  -- White color for the player's name
+        SetTextColour(255, 255, 255, 215)
         SetTextCentre(true)
         SetTextEntry("STRING")
-        AddTextComponentString(name)
-        EndTextCommandDisplayText(_x, _y + 0.015)  -- Adjust position
+        AddTextComponentString(playerName)
+        EndTextCommandDisplayText(_x, _y + 0.015)  
     end
 end
 
--- Main loop to continuously draw text when God Mode is enabled
+
 Citizen.CreateThread(function()
     while true do
         Citizen.Wait(0)
-        if godModeEnabled then
-            DrawTextOverPlayer()
+        
+        
+        for playerId, enabled in pairs(godModePlayers) do
+            if enabled then
+                local playerName = GetPlayerName(GetPlayerFromServerId(playerId))
+                DrawTextOverPlayer(playerId, playerName)
+            end
         end
     end
 end)
 
--- Register the /godmode command to toggle the God Mode
+
 RegisterCommand('godmode', function(source, args, rawCommand)
     godModeEnabled = not godModeEnabled
     TriggerServerEvent('toggleGodMode', godModeEnabled)
