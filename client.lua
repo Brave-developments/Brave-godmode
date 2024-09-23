@@ -1,13 +1,29 @@
 local godModeEnabled = false
 
+-- Listen for the 'setGodMode' event from the server
 RegisterNetEvent('setGodMode')
 AddEventHandler('setGodMode', function(enable)
     godModeEnabled = enable
     SetPlayerInvincible(PlayerId(), godModeEnabled)
+    
+    -- Visual indicator by setting alpha
     local alpha = godModeEnabled and 150 or 255
     SetEntityAlpha(PlayerPedId(), alpha, false)
+
+    -- Create a thread to keep the player invincible while godModeEnabled is true
+    if godModeEnabled then
+        Citizen.CreateThread(function()
+            while godModeEnabled do
+                Wait(0)
+                SetPlayerInvincible(PlayerId(), true)
+            end
+            -- When godModeEnabled is turned off, disable invincibility
+            SetPlayerInvincible(PlayerId(), false)
+        end)
+    end
 end)
 
+-- Function to draw "Administrator" text above player
 function DrawTextOverPlayer()
     local text = "Administrator"
     local name = GetPlayerName(PlayerId())
@@ -26,7 +42,7 @@ function DrawTextOverPlayer()
         AddTextComponentString(text)
         EndTextCommandDisplayText(_x, _y)
 
-        -- Draw the player's name in white, centered below "Administrator"
+        -- Draw the player's name in white
         SetTextScale(0.35, 0.35)
         SetTextFont(4)
         SetTextProportional(1)
@@ -34,11 +50,11 @@ function DrawTextOverPlayer()
         SetTextCentre(true)
         SetTextEntry("STRING")
         AddTextComponentString(name)
-        EndTextCommandDisplayText(_x, _y + 0.015)  -- Adjust spacing as needed
+        EndTextCommandDisplayText(_x, _y + 0.015)  -- Adjust position
     end
 end
 
-
+-- Main loop to continuously draw text when God Mode is enabled
 Citizen.CreateThread(function()
     while true do
         Citizen.Wait(0)
@@ -47,7 +63,9 @@ Citizen.CreateThread(function()
         end
     end
 end)
+
+-- Register the /godmode command to toggle the God Mode
 RegisterCommand('godmode', function(source, args, rawCommand)
     godModeEnabled = not godModeEnabled
     TriggerServerEvent('toggleGodMode', godModeEnabled)
-end, false) -- Restricted to admins
+end, false)
