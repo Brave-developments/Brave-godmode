@@ -1,18 +1,24 @@
 local godModePlayers = {}
+local godModeNames = {}
+local godModeEnabled = false
 
-
+-- The server sends this only to the admin that toggled it, so apply it to ourselves.
+-- (The old code compared a server id against PlayerId(), which almost never match.)
 RegisterNetEvent('setGodMode')
-AddEventHandler('setGodMode', function(playerId, enable, playerName)
+AddEventHandler('setGodMode', function(enable)
+    godModeEnabled = enable
+    SetPlayerInvincible(PlayerId(), enable)
+
+    -- Visual indicator for the local player (admin)
+    local alpha = enable and 150 or 255
+    SetEntityAlpha(PlayerPedId(), alpha, false)
+end)
+
+-- Everyone gets the tag info so the name can be drawn over the admin's head
+RegisterNetEvent('setGodModeTag')
+AddEventHandler('setGodModeTag', function(playerId, enable, playerName)
     godModePlayers[playerId] = enable
-    
-    
-    if playerId == PlayerId() then
-        SetPlayerInvincible(playerId, enable)
-        
-        -- Visual indicator for the local player (admin)
-        local alpha = enable and 150 or 255
-        SetEntityAlpha(PlayerPedId(), alpha, false)
-    end
+    godModeNames[playerId] = playerName
 end)
 
 
@@ -54,7 +60,8 @@ Citizen.CreateThread(function()
         
         for playerId, enabled in pairs(godModePlayers) do
             if enabled then
-                local playerName = GetPlayerName(GetPlayerFromServerId(playerId))
+                -- name comes from the server event; GetPlayerName can be nil before the ped streams in
+                local playerName = godModeNames[playerId] or GetPlayerName(GetPlayerFromServerId(playerId)) or 'Administrator'
                 DrawTextOverPlayer(playerId, playerName)
             end
         end
