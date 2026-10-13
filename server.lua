@@ -15,7 +15,9 @@ AddEventHandler('toggleGodMode', function(godModeStatus)
         local playerName = Player.PlayerData.charinfo.firstname .. " " .. Player.PlayerData.charinfo.lastname
 
      
-        TriggerClientEvent('setGodMode', -1, src, godModeStatus, playerName)  
+        -- apply on the target client only; broadcast the tag separately
+        TriggerClientEvent('setGodMode', src, godModeStatus)
+        TriggerClientEvent('setGodModeTag', -1, src, godModeStatus, playerName)
         print(("[GodMode] %s (%s) toggled God Mode: %s"):format(playerName, src, tostring(godModeStatus)))
     else
        
